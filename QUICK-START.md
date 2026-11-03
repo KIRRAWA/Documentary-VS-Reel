@@ -75,9 +75,9 @@ same choice is `--center lawn|rocky|original|<path>|<url>`.
 
 - **Browser mode** (double-click): a CSV + a timeline HTML download
   automatically when the run ends — check your Downloads folder.
-- **Server mode** (`task.py serve`): additionally archived in `data/` —
-  one CSV per run (`data/P01_...csv`), all events (`data/events.jsonl`),
-  and a zoomable timeline (`data/timeline_...html`).
+- **Server mode** (`task.py serve`): additionally archived in `output/` —
+  one CSV per run (`output/P01_...csv`), all events (`output/events.jsonl`),
+  and a zoomable timeline (`output/timeline_...html`).
 
 The timeline HTML is self-contained: open it in any browser to see which
 video was on screen at which moment, with every key press marked.
@@ -154,9 +154,9 @@ python3 task.py run --center lawn --subject P01 --duration 10
 ## 5. 数据在哪里
 
 - **浏览器模式**（双击打开）：结束时自动下载 CSV + 时间线 HTML——在 Downloads 文件夹找。
-- **服务器模式**（`task.py serve`）：额外存档到 `data/`——每次实验一个 CSV
-  （`data/P01_...csv`）、全部事件（`data/events.jsonl`）、可缩放的时间线
-  （`data/timeline_...html`）。
+- **服务器模式**（`task.py serve`）：额外存档到 `output/`——每次实验一个 CSV
+  （`output/P01_...csv`）、全部事件（`output/events.jsonl`）、可缩放的时间线
+  （`output/timeline_...html`）。
 
 时间线 HTML 自包含：用任意浏览器打开即可查看每个时刻屏幕上是哪条视频，
 每次按键都有标记。

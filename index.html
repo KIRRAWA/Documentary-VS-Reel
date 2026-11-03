@@ -113,6 +113,24 @@ details.protocol code { background: #16161a; padding: 1px 5px; border-radius: 4p
 /* Video box (vertical 9:16; letterboxing handled by video object-fit / canvas).
    class (not id) — Mode 3 runs two players at once. */
 .videoBox { position: relative; height: 100%; aspect-ratio: 9 / 16; max-width: 100%; margin: 0 auto; background: #000; overflow: hidden; }
+/* Phone-shaped frame (lab review feedback): rounded bezel + camera bar so the
+   reel pop-up reads as a phone screen. Toggled by the "phone frame" setting. */
+.videoBox.phoneFrame {
+  border-radius: 28px;
+  border: 6px solid #16161a;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 2px #2e2e34, 0 10px 30px rgba(0, 0, 0, .5);
+}
+.videoBox.phoneFrame::after {   /* front camera bar */
+  content: '';
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  width: 52px; height: 6px;
+  border-radius: 3px;
+  background: #2e2e34;
+  z-index: 40;
+}
 /* Two stacked media layers: the active one sits at translateY(0), the parked one
    below the box. Switching a clip slides the old layer up and the new one in —
    a TikTok-style vertical swipe. */
@@ -189,6 +207,11 @@ details.protocol code { background: #16161a; padding: 1px 5px; border-radius: 4p
         <input type="number" id="f_popleft" value="50" min="0" max="100" step="1">
         <div class="hint" data-i18n="hint.popLeftPct">Percentage of random pop-ups that open on the LEFT (right = 100 − this).</div>
       </div>
+      <div class="field check-row full" style="margin-top:6px">
+        <input type="checkbox" id="f_sidesubject">
+        <label for="f_sidesubject" data-i18n="field.sideSubject">Pop-up side fixed by subject number (even → right, odd → left)</label>
+      </div>
+      <div class="hint" data-i18n="hint.sideSubject">Overrides the side selection above: the pop-up always opens on the side fixed by the trailing number of the subject ID.</div>
       <div class="field">
         <label for="f_poptrigger" data-i18n="field.popTrigger">Popup trigger</label>
         <select id="f_poptrigger">
@@ -235,7 +258,7 @@ details.protocol code { background: #16161a; padding: 1px 5px; border-radius: 4p
         </select>
       </div>
       <div class="field full">
-        <label for="f_tasksrc" data-i18n="field.taskPage">Task page (face task; empty = built-in placeholder task)</label>
+        <label for="f_tasksrc" data-i18n="field.taskPage">Task page URL (face task; empty = built-in demo task)</label>
         <input type="text" id="f_tasksrc" placeholder="e.g. task/index.html  or  http://localhost:8000/task/" data-i18n-ph="ph.taskPage">
         <div class="hint" data-i18n="hint.taskPage">The task developer drops their page path in here — no changes to this file needed. Protocol below &amp; in README.md</div>
       </div>
@@ -290,6 +313,10 @@ details.protocol code { background: #16161a; padding: 1px 5px; border-radius: 4p
       <div class="field check-row" style="margin-top:6px">
         <input type="checkbox" id="f_decor" checked>
         <label for="f_decor" data-i18n="field.decor">Instagram-style decorations (like count · @author · progress bar)</label>
+      </div>
+      <div class="field check-row full" style="margin-top:6px">
+        <input type="checkbox" id="f_phoneframe" checked>
+        <label for="f_phoneframe" data-i18n="field.phoneFrame">Phone-shaped pop-up frame (rounded bezel)</label>
       </div>
       <div class="field full" style="margin-top:6px">
         <div class="check-row">
@@ -439,6 +466,9 @@ var I18N = {
     'field.popInterval': 'Auto popup interval (seconds)',
     'field.popLeftPct': 'Left-side chance (%) in Random mode',
     'hint.popLeftPct': 'Percentage of random pop-ups that open on the LEFT (right = 100 − this).',
+    'field.sideSubject': 'Pop-up side fixed by subject number (even → right, odd → left)',
+    'hint.sideSubject': 'Overrides the side selection above: the pop-up always opens on the side fixed by the trailing number of the subject ID.',
+    'field.phoneFrame': 'Phone-shaped pop-up frame (rounded bezel)',
     'field.centerSelect': 'Center documentary',
     'opt.centerLawn': '1 · Lawn (center/stimulus_lawn.mp4)',
     'opt.centerRocky': '2 · Rocky (center/stimulus_rocky.mp4)',
@@ -456,7 +486,7 @@ var I18N = {
     'field.startMode': 'Start mode',
     'opt.triggerWait': 'Wait for trigger key (black screen — scanner pulse)',
     'opt.triggerImm': 'Start immediately',
-    'field.taskPage': 'Task page (face task; empty = built-in placeholder task)',
+    'field.taskPage': 'Task page URL (face task; empty = built-in demo task)',
     'ph.taskPage': 'e.g. task/index.html  or  http://localhost:8000/task/',
     'hint.taskPage': 'The task developer drops their page path in here — no changes to this file needed. Protocol below & in README.md',
     'field.triggerKey': 'Trigger key (starts the run from black screen)',
@@ -494,7 +524,7 @@ var I18N = {
     'stats.scrolls': 'Scrolls (key B)',
     'stats.totalTime': 'Total viewing time',
     'stats.totalEvents': 'Total events',
-    'phTask.hint': 'placeholder task · waiting for task page',
+    'phTask.hint': 'built-in demo task · waiting for a task page to connect',
     'phTask.keyLabel': 'key: '
   },
   zh: {
@@ -548,6 +578,9 @@ var I18N = {
     'field.popInterval': '自动弹出间隔（秒）',
     'field.popLeftPct': '随机模式下左侧出现概率（%）',
     'hint.popLeftPct': '随机弹出时出现在左侧的百分比（右侧 = 100 − 此值）。',
+    'field.sideSubject': '按被试编号固定弹出侧（偶数 → 右侧，奇数 → 左侧）',
+    'hint.sideSubject': '覆盖上面的弹出侧设置：弹出侧始终由被试编号末尾的数字决定。',
+    'field.phoneFrame': '手机形状的弹出框（圆角边框）',
     'field.centerSelect': '中央纪录片',
     'opt.centerLawn': '1 · Lawn（center/stimulus_lawn.mp4）',
     'opt.centerRocky': '2 · Rocky（center/stimulus_rocky.mp4）',
@@ -565,7 +598,7 @@ var I18N = {
     'field.startMode': '开始方式',
     'opt.triggerWait': '等待触发键（黑屏，适合扫描脉冲）',
     'opt.triggerImm': '立即开始',
-    'field.taskPage': '任务页面（人脸任务；留空 = 内置占位任务）',
+    'field.taskPage': '任务页面 URL（人脸任务；留空 = 内置演示任务）',
     'ph.taskPage': '例如：task/index.html 或 http://localhost:8000/task/',
     'hint.taskPage': '任务方把页面路径填这里即可接入，无需改本页代码。协议见下方说明与 README.md',
     'field.triggerKey': '触发键（黑屏时按此键开始）',
@@ -603,7 +636,7 @@ var I18N = {
     'stats.scrolls': '滚动次数（B 键）',
     'stats.totalTime': '总观看时长',
     'stats.totalEvents': '事件总数',
-    'phTask.hint': '占位任务 · 等待任务页接入',
+    'phTask.hint': '内置演示任务 · 等待任务页接入',
     'phTask.keyLabel': '按键: '
   }
 };
@@ -626,7 +659,7 @@ function guideHTML(){
     ? '<ol>' +
       '<li>调整<b>居中视频</b>、<b>弹出侧与左侧概率</b>、<b>饱和度与音量</b>滑杆及其他参数。</li>' +
       '<li>点击<b>开始实验</b>。触发模式下黑屏，直到按下<b>触发键</b>（默认 <code>5</code>）开始。</li>' +
-      '<li>立即体验：<b>任务页面</b>留空即内置占位任务，按 <b>A</b> 弹出视频、<b>B</b> 下一条、再按 <b>A</b> 收起。</li>' +
+      '<li>立即体验：<b>任务页面 URL</b> 留空即内置演示任务，按 <b>A</b> 弹出视频、<b>B</b> 下一条、再按 <b>A</b> 收起。</li>' +
       '<li>运行结束（倒计时结束或按 <b>Q</b>）后，结束页显示统计并自动下载含全部毫秒级事件的 CSV 与时间线可视化（HTML）。</li>' +
       '<li>使用真实视频：把 MP4 放进 <code>videos/</code> 并运行 <code>python3 generate_manifest.py</code>；或注册采集器文件夹（<b>视频文件夹</b>）导入 Instagram reels（含作者与点赞数）。</li>' +
       '</ol>' +
@@ -644,7 +677,7 @@ function guideHTML(){
     : '<ol>' +
       '<li>Adjust the <b>center video</b>, <b>pop-up side / left-side chance</b>, <b>saturation &amp; volume</b> sliders, and the other settings.</li>' +
       '<li>Click <b>Start experiment</b>. In trigger mode the screen stays black until the <b>trigger key</b> (default <code>5</code>).</li>' +
-      '<li>Try it now: leave <b>Task page</b> empty to get the built-in placeholder task, then press <b>A</b> to pop a video up, <b>B</b> to scroll, <b>A</b> to close.</li>' +
+      '<li>Try it now: leave <b>Task page URL</b> empty to get the built-in demo task, then press <b>A</b> to pop a video up, <b>B</b> to scroll, <b>A</b> to close.</li>' +
       '<li>When the run ends (countdown or the <b>Q</b> key), an end screen shows statistics and downloads the CSV of all timestamped events plus a timeline visualization (HTML).</li>' +
       '<li>To use real videos: drop MP4 files into <code>videos/</code> and run <code>python3 generate_manifest.py</code>, or register a collector folder under <b>Video folders</b> to import Instagram reels (author + like count included).</li>' +
       '</ol>' +
@@ -732,7 +765,8 @@ var DEFAULTS = {
   tasksrc: '', durationMin: 10,
   trigger: 'wait', triggerkey: '5', keya: 'a', keyb: 'b',
   decor: true, subject: 'P01', note: '',
-  popside: 'random', popleft: 50, poptrigger: 'manual', popinterval: 10,
+  popside: 'random', popleft: 50, sidesubject: false, poptrigger: 'manual', popinterval: 10,
+  phoneframe: true,
   centerselect: 'original', centervideo: 'center/center.mp4',
   satcenter: 100, volcenter: 0, satreel: 100, volreel: 0,
   allowseek: false
@@ -775,8 +809,12 @@ var FAKE_CLIPS = [
 /* ================= Utilities ================= */
 function now(){ return Math.round(performance.now() - t0); }
 function log(type, key, value, note){
-  if(t0 === null) return;
-  rows.push({ t: now(), subject: S.subject, type: type, key: key || '', value: value || '', note: note || '' });
+  // Returns the row object so callers can stash extra in-memory fields on it
+  // (see _meta below) without polluting the CSV.
+  if(t0 === null) return null;
+  var r = { t: now(), subject: S.subject, type: type, key: key || '', value: value || '', note: note || '' };
+  rows.push(r);
+  return r;
 }
 function readNum(id, fallback, min, max){
   // Numeric setting read: empty/NaN falls back, 0 is a REAL value (fixes the
@@ -797,13 +835,18 @@ function clipStart(side, clip, reason){
             likes: clip && clip.likes != null ? clip.likes : null,
             startT: now(), reason: reason || '' };
   openClips[side] = o;
-  log('clip_start', side, side + '|' + name, JSON.stringify(o));
+  // Lean CSV (lab review feedback): value = clip name only, note = reason only.
+  // Rich metadata (src/kind/author/likes) stays in-memory on the row for the
+  // timeline/stats and is never serialized into the CSV.
+  var r = log('clip_start', side, name, reason || '');
+  if(r) r._meta = { name: name, src: o.src, kind: o.kind, author: o.author,
+                    likes: o.likes, reason: reason || '' };
 }
 function clipEnd(side, reason){
   var o = openClips[side];
   if(!o) return;
   delete openClips[side];
-  log('clip_end', side, side + '|' + o.name, (reason || '') + ' duration_ms=' + (now() - o.startT));
+  log('clip_end', side, o.name, reason || '');
 }
 function shuffle(arr){
   for(var i = arr.length - 1; i > 0; i--){
@@ -872,7 +915,10 @@ function makePlayer(root, label){
   };
   p.build = function(){
     p.videoBox = document.createElement('div');
-    p.videoBox.className = 'videoBox';
+    // buildClipList() runs after readSettings(), so the phone-frame setting
+    // is current here — the class must be applied at build time (players are
+    // rebuilt fresh for every run).
+    p.videoBox.className = 'videoBox' + (S.phoneframe ? ' phoneFrame' : '');
     p.videoBox.innerHTML =
       '<div class="mediaLayer"><video playsinline muted></video><canvas></canvas></div>' +
       '<div class="mediaLayer"><video playsinline muted></video><canvas></canvas></div>' +
@@ -1093,7 +1139,7 @@ function makePlayer(root, label){
     if(p.sliding){ clearTimeout(p.slideTimer); p.completeSlide(true); }   // finish current motion instantly
     p.curIdx = (p.curIdx + 1) % order.length;
     var cl = clipList[order[p.curIdx]];
-    log('video_next', p.label, cl.name, 'author=' + (cl.author || '') + ' likes=' + (cl.likes == null ? '' : cl.likes));
+    log('video_next', p.label, cl.name, '');
     p.showClip(cl, true, 'next');
   };
   p.openPanel = function(){
@@ -1145,6 +1191,13 @@ function closePop(p){
   p.closePanel();
 }
 function pickSide(){
+  // Fixed per-subject side (lab request): even trailing subject number → right,
+  // odd → left. Falls back to the normal side selection when the subject ID
+  // has no trailing digits.
+  if(S.sidesubject){
+    var m = /(\d+)\s*$/.exec(S.subject || '');
+    if(m) return (parseInt(m[1], 10) % 2 === 0) ? 'right' : 'left';
+  }
   // Random mode honors the left-side percentage setting: P(left) = popleft%.
   // (popleft is always a number now — 0 is a real value, so no || fallback.)
   if(S.popside === 'random')
@@ -1397,11 +1450,13 @@ function readSettings(){
     keya: ($('f_keya').value.trim() || 'a').toLowerCase(),
     keyb: ($('f_keyb').value.trim() || 'b').toLowerCase(),
     decor: $('f_decor').checked,
+    phoneframe: $('f_phoneframe').checked,
     allowseek: $('f_allowseek').checked,
     subject: $('f_subject').value.trim() || 'P01',
     note: $('f_note').value.trim(),
     popside: $('f_popsid').value,
     popleft: readNum('f_popleft', 50, 0, 100),
+    sidesubject: $('f_sidesubject').checked,
     poptrigger: $('f_poptrigger').value,
     popinterval: Math.max(2, readNum('f_popinterval', 10, 2, 3600)),
     centerselect: $('f_centerselect').value,
@@ -1433,9 +1488,11 @@ function loadSettings(){
   $('f_duration').value = d.durationMin;
   $('f_trigger').value = d.trigger; $('f_triggerkey').value = d.triggerkey;
   $('f_keya').value = d.keya; $('f_keyb').value = d.keyb;
-  $('f_decor').checked = d.decor; $('f_allowseek').checked = !!d.allowseek;
+  $('f_decor').checked = d.decor; $('f_phoneframe').checked = !!d.phoneframe;
+  $('f_allowseek').checked = !!d.allowseek;
   $('f_subject').value = d.subject; $('f_note').value = d.note;
   $('f_popsid').value = d.popside; $('f_popleft').value = d.popleft;
+  $('f_sidesubject').checked = !!d.sidesubject;
   $('f_poptrigger').value = d.poptrigger;
   $('f_popinterval').value = d.popinterval;
   syncCenterSelect(d.centervideo, d.centerselect);
@@ -1487,8 +1544,8 @@ function beginRun(){
   blackout.classList.add('hidden');
   runActive = true;
   log('session_start', null, null, 'videosource=' + S.videosource + ' durationMin=' + S.durationMin +
-      ' decor=' + S.decor + ' allowseek=' + S.allowseek + ' tasksrc=' + (S.tasksrc || '(placeholder)') +
-      ' popside=' + S.popside + ' popleft=' + S.popleft + ' poptrigger=' + S.poptrigger +
+      ' decor=' + S.decor + ' phoneframe=' + S.phoneframe + ' allowseek=' + S.allowseek + ' tasksrc=' + (S.tasksrc || '(placeholder)') +
+      ' popside=' + S.popside + ' popleft=' + S.popleft + ' sidesubject=' + S.sidesubject + ' poptrigger=' + S.poptrigger +
       ' centervideo=' + (S.centervideo || '(none)') +
       ' satcenter=' + S.satcenter + ' volcenter=' + S.volcenter +
       ' satreel=' + S.satreel + ' volreel=' + S.volreel + ' note=' + S.note);
@@ -1511,8 +1568,10 @@ function clipIntervals(){
   for(var i = 0; i < rows.length; i++){
     var r = rows[i];
     if(r.type === 'clip_start'){
-      var meta = {};
-      try { meta = JSON.parse(r.note || '{}') || {}; } catch(e){ meta = {}; }
+      // Preferred source: in-memory _meta stashed by clipStart(). Fallbacks
+      // keep old-format CSVs (note=JSON, value="side|name") readable.
+      var meta = (r._meta && r._meta.name) ? r._meta : {};
+      if(!meta.name){ try { meta = JSON.parse(r.note || '{}') || {}; } catch(e){ meta = {}; } }
       if(!meta.name) meta.name = String(r.value || '').split('|').slice(1).join('|');
       var side = r.key || meta.side || '?';
       if(open[side]){
@@ -1600,7 +1659,7 @@ function endRun(reason){
 }
 function pushToServer(reason){
   // Server mode (task.py serve): archive the run server-side as well
-  // (data/events.jsonl + CSV + timeline HTML). Silent no-op on file://.
+  // (output/events.jsonl + CSV + timeline HTML). Silent no-op on file://.
   if(location.protocol === 'file:') return;
   try {
     fetch('/api/events', {

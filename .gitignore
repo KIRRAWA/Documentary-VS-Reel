@@ -18,7 +18,7 @@ videos/pool_selection.json
 # task.py CLI/server state (machine-specific; run logs may contain subject data)
 config.json
 config.js
-data/
+output/
 
 # macOS
 .DS_Store

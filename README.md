@@ -22,7 +22,7 @@ fmri-face-video-task/
     ig_downloaded.txt     # reels-sync download archive (gitignored)
     *.mp4                 # Instagram reels downloaded by reels-sync
   config.json / config.js # created by task.py (machine-specific, gitignored)
-  data/                   # server-side run archives (gitignored)
+  output/                   # server-side run archives (gitignored)
   README.md
 ```
 
@@ -101,16 +101,18 @@ Key mapping: **A** = pop up / close (per the side setting; "both" opens both),
 |---|---|
 | Pop-up side | Random / both / left only / right only |
 | Left-side chance (%) | Random mode only: left-side probability (0-100, default 50) |
+| Side by subject number | On: the pop-up side is **fixed per participant** by the trailing digits of the subject ID — even → right, odd → left (overrides the side selection above) |
+| Phone-shaped pop-up frame | On (default): the reel pops up in a rounded phone-style bezel (camera bar, dark frame); off = plain full-bleed strip |
 | Pop-up trigger | Manual (A opens/closes) / Auto (opens every N seconds, closes when the clip ends) |
 | Pop-up interval | Auto mode only: seconds between auto pop-ups |
-| Center video | Documentary URL shown centered (YouTube links auto-converted to embeds; empty = built-in placeholder task). YouTube needs internet — use a local file for offline runs |
+| Center video | Documentary URL shown centered (YouTube links auto-converted to embeds; empty = built-in demo task). YouTube needs internet — use a local file for offline runs |
 | Center saturation | Slider 0-200% for the documentary (0% = black & white) |
 | Center volume | Slider 0-100% (local files only; YouTube embeds stay muted) |
 | Reel saturation | Slider 0-200% for the pop-up reels (0% = black & white) |
 | Reel volume | Slider 0-100% (0 = muted — also the browser-autoplay-safe default) |
 | Video source | Auto / real videos only / placeholder clips only (debugging) |
 | Run duration | Minutes, decimals allowed |
-| Task page | Path to the face-task page (empty = built-in placeholder task). **Filling this in is the "integration"** |
+| Task page | Path to the face-task page (empty = built-in demo task). **Filling this in is the "integration"** |
 | Start mode | Wait for trigger key (black screen — for scanner pulse) / start immediately |
 | Trigger key | Default `5`; scanner pulse boxes usually map to 5 or t |
 | Keys A / B | Remappable (button boxes send standard key codes, same as a keyboard) |
@@ -224,7 +226,7 @@ Button boxes act as standard keyboards; key codes match a normal keyboard, so ju
 
 ## Language
 
-The settings page has an **EN / 中文** toggle at the top right; the choice is remembered. All on-screen texts follow the selected language — settings, usage guide, integration protocol, trigger-wait screen, end screen, and the placeholder task inside the iframe. Data logs and CSV output stay in English regardless, for analysis consistency.
+The settings page has an **EN / 中文** toggle at the top right; the choice is remembered. All on-screen texts follow the selected language — settings, usage guide, integration protocol, trigger-wait screen, end screen, and the built-in demo task inside the iframe. Data logs and CSV output stay in English regardless, for analysis consistency.
 
 ## Subject instructions (what the subject does)
 
@@ -238,20 +240,20 @@ That is the entire video interaction — no mouse, no other keys. Whether and ho
 
 ## Data logging
 
-Every event is one CSV row with millisecond timestamps (t=0 is the trigger/start moment); downloaded automatically at the end (and also archived server-side in `data/` when running through `task.py`):
+Every event is one CSV row with millisecond timestamps (t=0 is the trigger/start moment); downloaded automatically at the end (and also archived server-side in `output/` when running through `task.py`):
 
 `t_ms, subject, type, key, value, note`
 
 | type | Meaning |
 |---|---|
-| session_start | Run start (note contains full config incl. saturations, volumes, left-side chance, allowseek) |
+| session_start | Run start (note contains full config incl. saturations, volumes, pop-up side mode, phone frame, allowseek) |
 | trigger | Scanner trigger received |
 | key | Every key this page receives (note: press/repeat) |
 | popup_manual / popup_auto | A pop-up opened (value = side) |
 | video_open / video_close | Video opened/closed (value = clip name) |
-| video_next | Next clip (B key or auto-advance; note: author + likes of the new clip) |
-| clip_start | A clip began playing — value = `side\|name`, note = JSON `{side, name, src, kind, author, likes, reason}` (reason: open_first / open_advance / next / switch / begin). Side is `left`, `right`, or `center` (the documentary) |
-| clip_end | A clip stopped — value = `side\|name`, note = `reason duration_ms=N` (reason: close / switch / run_end / replaced / missing_end) |
+| video_next | Next clip (B key or auto-advance; note is empty — keep the CSV lean) |
+| clip_start | A clip became visible — value = **clip name only**, note = **reason only** (open_first / open_advance / next / switch / begin). Side is the `key` column: `left`, `right`, or `center` (the documentary) |
+| clip_end | A clip stopped — value = clip name, note = reason (close / switch / run_end / replaced / missing_end). Duration = `t_ms` difference from its `clip_start` |
 | video_play / video_error | Clip loaded successfully / failed |
 | task_event | Events reported by the task page (value = event type, note = JSON) |
 | task_ready / warn_* | Integration status and warnings |
@@ -264,6 +266,16 @@ at once is never double-counted). All `t_ms` values are session-relative
 milliseconds from a `performance.now()` clock — **video progress-bar
 positions never participate in timing**, and seek-bar dragging produces no
 log rows at all.
+
+**Timing note (measured, 2026-11)**: `clip_start` is logged the moment the
+clip appears on screen; `video_play` fires on the browser's `loadeddata`
+event, i.e. after the first frame is decoded — the gap between the two is
+decode latency, not measurement error: ~20-55 ms for a warm load, a few
+hundred ms on the very first load of a session. Playback itself is not
+truncated: a verified run with a 9.367 s reel played exactly 9.367 s from
+`video_play` to the `ended` event (the interval in the CSV is a few ms
+longer because it also spans the decode startup). Use `clip_start` as the
+"video shown" timestamp.
 
 ### Run timeline (visualization)
 
@@ -289,7 +301,7 @@ timeline** (single HTML file, no external dependencies):
 
 The file is downloaded automatically at the end (the end screen has a
 "Download timeline" button in case the browser blocks the second automatic
-download) and archived server-side as `data/timeline_<subject>_<stamp>.html`
+download) and archived server-side as `output/timeline_<subject>_<stamp>.html`
 when running through `task.py`.
 
 ## Integration protocol (for the face-task developer)
@@ -333,7 +345,7 @@ window.parent.postMessage({source:'task', type:'ready'}, '*');
 | Task → template | `{source:'task', type:'ready'}` | Task page loaded |
 | Task → template | `{source:'task', type:'event', event:{...}}` | Trial events, logged into the CSV as-is |
 
-The built-in placeholder task (settings left empty) is written against exactly this protocol — use it as the reference implementation.
+The built-in demo task (settings left empty) is written against exactly this protocol — use it as the reference implementation.
 
 ## Scanner-room deployment checklist
 
@@ -352,11 +364,11 @@ The built-in placeholder task (settings left empty) is written against exactly t
 - **A video won't play** → transcode to H.264 + AAC MP4 (e.g. `ffmpeg -i in.mov -c:v libx264 -pix_fmt yuv420p -c:a aac out.mp4`)
 - **Changed videos but the page doesn't update** → rerun the script + refresh (Ctrl/Cmd+R)
 - **Why not embed live Instagram/TikTok directly** → no third-party feed API, iframe embeds can't be key-controlled, and a network dependency is risky mid-scan; a pre-downloaded pool is the controllable alternative
-- **Center video stays black** → YouTube embeds need internet; for offline scanner runs download the clip (e.g. `yt-dlp URL -o center/center.mp4`) and enter its path instead, or leave it empty for the built-in placeholder task
+- **Center video stays black** → YouTube embeds need internet; for offline scanner runs download the clip (e.g. `yt-dlp URL -o center/center.mp4`) and enter its path instead, or leave it empty for the built-in demo task
 - **Imported pool won't play** → imported pools are served as `/media/...` URLs by `task.py`; keep the server running (`python3 task.py serve`), or rerun `python3 task.py reels-sync --no-download` to switch back to the built-in `videos/` pool
 - **file:// limitations** → this template works around most of them (manifests load via script tags); only folder scanning and timeline thumbnails need the server: `python3 task.py serve` then visit `http://127.0.0.1:8000/`
-- **The timeline HTML did not download** → browsers may block two automatic downloads at once (CSV + timeline). Use the "Download timeline" button on the end screen, or grab the archived copy from `data/timeline_*.html` (server mode)
-- **No thumbnail on timeline hover** → thumbnails exist only for videos whose filename is an Instagram shortcode, are served by `task.py` from the sibling `reel-crawler/review_frames/` (override: `FMRI_FRAMES_ROOT`), and require the timeline to be opened via the server (`http://127.0.0.1:8000/data/timeline_*.html`) — an offline copy degrades to text-only tooltips
+- **The timeline HTML did not download** → browsers may block two automatic downloads at once (CSV + timeline). Use the "Download timeline" button on the end screen, or grab the archived copy from `output/timeline_*.html` (server mode)
+- **No thumbnail on timeline hover** → thumbnails exist only for videos whose filename is an Instagram shortcode, are served by `task.py` from the sibling `reel-crawler/review_frames/` (override: `FMRI_FRAMES_ROOT`), and require the timeline to be opened via the server (`http://127.0.0.1:8000/output/timeline_*.html`) — an offline copy degrades to text-only tooltips
 - **Fullscreen did not engage on CLI start** → the browser window opens maximized via `--start-fullscreen`; the page additionally requests DOM fullscreen on the first key press/Start click. If the scanner OS window manager swallows Esc, use the browser's own fullscreen toggle instead — the run is unaffected either way
 
 ---
@@ -381,7 +393,7 @@ fmri-face-video-task/
     ig_downloaded.txt     # reels-sync 下载归档（已 gitignore）
     *.mp4                 # reels-sync 下载的 Instagram reels
   config.json / config.js # 由 task.py 生成（机器相关，已 gitignore）
-  data/                   # 服务端实验记录存档（已 gitignore）
+  output/                   # 服务端实验记录存档（已 gitignore）
   README.md
 ```
 
@@ -446,16 +458,18 @@ python3 task.py run --subject P01 --duration 10 --trigger immediate \
 |---|---|
 | 弹出方向 | 随机 / 两侧 / 仅左 / 仅右 |
 | 左侧出现概率（%） | 仅随机模式：左侧弹出概率（0-100，默认 50） |
+| 按被试编号固定弹出侧 | 开启：弹出侧由被试编号末尾数字**按人固定**——偶数 → 右侧，奇数 → 左侧（覆盖上面的弹出侧设置） |
+| 手机形状弹出框 | 默认开启：reel 弹出时带手机式圆角边框（摄像头条 + 深色包边）；关闭 = 原样满铺侧条 |
 | 弹出方式 | 手动（按 A 开关）/ 自动（每 N 秒弹出、播完自动收起） |
 | 弹出间隔 | 仅自动模式：两次自动弹出间隔秒数 |
-| 中央视频 | 居中纪录片 URL（YouTube 自动转嵌入；留空 = 内置占位任务）。YouTube 需联网——扫描间离线请用本地文件 |
+| 中央视频 | 居中纪录片 URL（YouTube 自动转嵌入；留空 = 内置演示任务）。YouTube 需联网——扫描间离线请用本地文件 |
 | 中央饱和度 | 纪录片滑杆 0-200%（0% = 黑白） |
 | 中央音量 | 纪录片滑杆 0-100%（仅本地文件；YouTube 嵌入保持静音） |
 | Reel 饱和度 | 弹出 reels 滑杆 0-200%（0% = 黑白） |
 | Reel 音量 | 弹出 reels 滑杆 0-100%（0 = 静音，也是浏览器自动播放的安全默认） |
 | 视频来源 | 自动 / 仅真实视频 / 仅占位动画（调试） |
 | 实验时长 | 分钟，可小数 |
-| 任务页面 | 人脸任务页面路径（留空 = 内置占位任务）。**填这个就是「接入」** |
+| 任务页面 | 人脸任务页面路径（留空 = 内置演示任务）。**填这个就是「接入」** |
 | 开始方式 | 等待触发键（黑屏，适合扫描脉冲）/ 立即开始 |
 | 触发键 | 默认 `5`，按钮盒接 TTL 脉冲通常映射 5 或 t |
 | A / B 键 | 可改（按钮盒键码与键盘一致） |
@@ -551,7 +565,7 @@ preference 算法使用。`FMRI_REELCRAWLER_ROOT` 指向 reel-crawler 检出的�
 
 ## 语言
 
-设置页右上角有 **EN / 中文** 切换按钮，选择会被记住。所有界面文字跟随所选语言——设置页、使用指南、对接协议、触发等待屏、结束页、iframe 内的占位任务。数据日志与 CSV 始终为英文，保证分析一致。
+设置页右上角有 **EN / 中文** 切换按钮，选择会被记住。所有界面文字跟随所选语言——设置页、使用指南、对接协议、触发等待屏、结束页、iframe 内的演示任务。数据日志与 CSV 始终为英文，保证分析一致。
 
 ## 被试说明（被试要做什么）
 
@@ -565,20 +579,20 @@ preference 算法使用。`FMRI_REELCRAWLER_ROOT` 指向 reel-crawler 检出的�
 
 ## 数据记录
 
-所有事件一行一条，毫秒时间戳（t=0 为触发/开始时刻），结束自动下载 CSV（经 `task.py` 运行时还会在服务器端存档到 `data/`）：
+所有事件一行一条，毫秒时间戳（t=0 为触发/开始时刻），结束自动下载 CSV（经 `task.py` 运行时还会在服务器端存档到 `output/`）：
 
 `t_ms, subject, type, key, value, note`
 
 | type | 含义 |
 |---|---|
-| session_start | 开始（note 含全部配置：饱和度、音量、左侧概率、allowseek 等） |
+| session_start | 开始（note 含全部配置：饱和度、音量、弹出侧模式、手机框、allowseek 等） |
 | trigger | 扫描触发 |
 | key | 本页收到的每个按键（note: press/repeat） |
 | popup_manual / popup_auto | 弹窗打开（value=侧别） |
 | video_open / video_close | 视频打开/关闭（value=视频名） |
-| video_next | 换下一条（B 键或自动推进；note：新视频的作者与点赞数） |
-| clip_start | 一条视频开始播放——value = `side\|name`，note = JSON `{side, name, src, kind, author, likes, reason}`（reason: open_first / open_advance / next / switch / begin）。side 为 `left` / `right` / `center`（纪录片） |
-| clip_end | 一条视频停止——value = `side\|name`，note = `reason duration_ms=N`（reason: close / switch / run_end / replaced / missing_end） |
+| video_next | 换下一条（B 键或自动推进；note 留空——保持 CSV 精简） |
+| clip_start | 一条视频上屏——value = **仅视频名**，note = **仅原因**（open_first / open_advance / next / switch / begin）。侧别在 `key` 列：`left` / `right` / `center`（纪录片） |
+| clip_end | 一条视频停止——value = 视频名，note = 原因（close / switch / run_end / replaced / missing_end）。时长 = 与配对 `clip_start` 的 `t_ms` 差 |
 | video_play / video_error | 视频加载成功/失败 |
 | task_event | 任务页上报的事件（value=事件类型，note=JSON） |
 | task_ready / warn_* | 对接状态与警告 |
@@ -588,6 +602,12 @@ preference 算法使用。`FMRI_REELCRAWLER_ROOT` 指向 reel-crawler 检出的�
 `clip_start` 隐式结束上一个区间）。结束页统计用左右区间**并集**（两侧同开不会
 重复计）。所有 `t_ms` 都是相对实验开始的毫秒数（`performance.now()` 时钟）——
 **视频进度条位置从不参与计时**，拖动进度条也不产生任何日志行。
+
+**时序说明（2026-11 实测）**：`clip_start` 在视频上屏的瞬间记录；`video_play`
+在浏览器 `loadeddata` 事件（首帧解码完成）时触发——两者之差是解码延迟，不是
+测量误差：热加载约 20-55 ms，会话第一次加载可达数百 ms。播放本身无截断：实测
+一条 9.367 s 的 reel 从 `video_play` 到 `ended` 恰好播了 9.367 s（CSV 里的区间
+多几毫秒是因为还包含了解码启动）。分析时请用 `clip_start` 作为「视频上屏」时刻。
 
 ### 实验时间线（可视化）
 
@@ -610,7 +630,7 @@ HTML 文件，零外部依赖）：
 
 时间线在结束时自动下载（结束页有「Download timeline」按钮，防止浏览器拦截
 第二次自动下载），经 `task.py` 运行时还会存档到
-`data/timeline_<subject>_<stamp>.html`。
+`output/timeline_<subject>_<stamp>.html`。
 
 ## 对接协议（给人脸任务开发者）
 
@@ -653,7 +673,7 @@ window.parent.postMessage({source:'task', type:'ready'}, '*');
 | 任务 → 模板 | `{source:'task', type:'ready'}` | 任务页加载完成 |
 | 任务 → 模板 | `{source:'task', type:'event', event:{...}}` | 试次事件，原样记入 CSV |
 
-内置占位任务（设置页留空时）就是按此协议写的，可直接当参考实现。
+内置演示任务（设置页留空时）就是按此协议写的，可直接当参考实现。
 
 ## 扫描间部署清单
 
@@ -672,9 +692,9 @@ window.parent.postMessage({source:'task', type:'ready'}, '*');
 - **某视频播不出来** → 转成 H.264 + AAC 的 MP4（如 `ffmpeg -i in.mov -c:v libx264 -pix_fmt yuv420p -c:a aac out.mp4`）
 - **改了视频但页面没更新** → 重跑脚本 + 刷新（Ctrl/Cmd+R）
 - **为什么不能直接嵌实时 Instagram/TikTok** → 无第三方 feed 接口、iframe 嵌入不可按键控制、依赖网络中途断连风险高；预下载池是可控替代
-- **中央视频黑屏** → YouTube 嵌入需要联网；扫描间离线请先下载（如 `yt-dlp URL -o center/center.mp4`）再填本地路径，或留空用内置占位任务
+- **中央视频黑屏** → YouTube 嵌入需要联网；扫描间离线请先下载（如 `yt-dlp URL -o center/center.mp4`）再填本地路径，或留空用内置演示任务
 - **导入的视频池播不出来** → 导入池以 `/media/...` 地址由 `task.py` 伺服，请保持服务器运行（`python3 task.py serve`）；或重跑 `python3 task.py reels-sync --no-download` 切回内置 `videos/` 池
 - **file:// 限制** → 本模板已规避大部分限制（清单用 script 标签加载而非 fetch）；只有文件夹扫描和时间线缩略图需要服务器：`python3 task.py serve` 后访问 `http://127.0.0.1:8000/`
-- **时间线 HTML 没下载** → 浏览器可能拦截连续两次自动下载（CSV + 时间线）。用结束页的「Download timeline」按钮，或到 `data/timeline_*.html` 拿存档（服务器模式）
-- **悬停没缩略图** → 只有文件名为 Instagram shortcode 的视频有首帧，由 `task.py` 从同级 `reel-crawler/review_frames/` 伺服（可用环境变量 `FMRI_FRAMES_ROOT` 覆盖），且时间线需经服务器打开（`http://127.0.0.1:8000/data/timeline_*.html`）——离线打开退化为纯文字提示
+- **时间线 HTML 没下载** → 浏览器可能拦截连续两次自动下载（CSV + 时间线）。用结束页的「Download timeline」按钮，或到 `output/timeline_*.html` 拿存档（服务器模式）
+- **悬停没缩略图** → 只有文件名为 Instagram shortcode 的视频有首帧，由 `task.py` 从同级 `reel-crawler/review_frames/` 伺服（可用环境变量 `FMRI_FRAMES_ROOT` 覆盖），且时间线需经服务器打开（`http://127.0.0.1:8000/output/timeline_*.html`）——离线打开退化为纯文字提示
 - **CLI 启动后没进全屏** → 浏览器窗口通过 `--start-fullscreen` 最大化打开，页面还会在第一次按键/点 Start 时再请求 DOM 全屏。若扫描间系统窗口管理器吞掉了 Esc，改用浏览器自带全屏切换即可——实验不受影响

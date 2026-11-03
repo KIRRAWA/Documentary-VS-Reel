@@ -63,7 +63,7 @@ python3 task.py serve
 | `python3 task.py pools` | List all discoverable pools (registered folders + built-in `videos/`). |
 | `python3 task.py import <path>` | Import a folder as the **active pool** — rewrites `videos/manifest.js` to serve `/media/...` URLs from that folder (nothing is copied). |
 | `python3 task.py config show` | Print the stored CLI settings. |
-| `python3 task.py config set KEY=VALUE ...` | Update settings, e.g. `config set subject=P02 popleft=30 satreel=0`. |
+| `python3 task.py config set KEY=VALUE ...` | Update settings, e.g. `config set subject=P02 popleft=30 satreel=0 sidesubject=true phoneframe=true`. |
 
 ### `run` options
 
@@ -129,8 +129,9 @@ approved reels.
 Per reel, **author, caption and like count** are baked into the manifest from
 the pool metadata, together with **tags** (review category / model category /
 audio status) kept for a future preference algorithm; the like count is shown
-Instagram-style (e.g. `45.1K`) on the right side of the screen, and author +
-likes are written into the CSV log (`video_next` rows' `note` field).
+Instagram-style (e.g. `45.1K`) on the right side of the screen. (Author and
+likes are available in the run timeline visualization; the CSV itself is
+deliberately lean — see README "Data logging".)
 Already-downloaded reels are skipped via `videos/ig_downloaded.txt`, so
 reruns are cheap.
 
@@ -164,8 +165,8 @@ On the settings page, the **Video folders** card lists the same registered
 folders; you can scan, import, and switch pools from there. Importing also
 pulls **author name + like count** for every reel whose shortcode matches
 local metadata; the like count is shown Instagram-style (e.g. `45.1K`) on the
-right side of the screen, and author + likes are written into the CSV log
-(`video_next` rows' `note` field).
+right side of the screen (the run timeline shows author + likes per interval;
+the CSV is deliberately lean).
 
 With `reels-sync`, metadata is taken straight from each pool entry and baked
 into the manifest. The folder-import path (above) instead resolves metadata
@@ -193,9 +194,9 @@ count.
 | `pool.json` | Bundled review-team pool snapshot — `reels-sync` falls back to it when no reel-crawler checkout exists (zip newcomers) |
 | `videos/pool_selection.json` | Optional pinned selection (gitignored): when present, the pool is restricted to the listed shortcodes |
 | `videos/ig_downloaded.txt` | `reels-sync` download archive (gitignored) |
-| `data/events.jsonl` | One JSON line per finished run (server mode; includes the `timelineFile` pointer but not the HTML itself) |
-| `data/<subject>_<stamp>.csv` | Per-run CSV, same columns as the browser download |
-| `data/timeline_<subject>_<stamp>.html` | Per-run self-contained timeline visualization (zoomable / pannable; archived automatically in server mode) |
+| `output/events.jsonl` | One JSON line per finished run (server mode; includes the `timelineFile` pointer but not the HTML itself) |
+| `output/<subject>_<stamp>.csv` | Per-run CSV, same columns as the browser download |
+| `output/timeline_<subject>_<stamp>.html` | Per-run self-contained timeline visualization (zoomable / pannable; archived automatically in server mode) |
 
 The timeline's hover thumbnails are served from the sibling
 `reel-crawler/review_frames/` capture folder (same source the metadata chain
@@ -229,4 +230,4 @@ a matching frame the tooltip simply shows text.
   intentionally show text-only tooltips.
 - **Timeline file didn't download** — browsers may block the second automatic
   download at the end of a run. Use the **Download timeline** button on the
-  end screen, or grab the archived copy from `data/` (server mode).
+  end screen, or grab the archived copy from `output/` (server mode).

@@ -11,11 +11,11 @@ Two ways to run the task:
      serve run-timeline thumbnails, and archive run logs server-side. The
      CLI can also start a run without touching the settings page.
 
-Every run end (countdown or Q key) archives server-side under data/:
-    data/<subject>_<stamp>.csv          millisecond event table
-    data/events.jsonl                   full payload per run (timeline HTML
+Every run end (countdown or Q key) archives server-side under output/:
+    output/<subject>_<stamp>.csv          millisecond event table
+    output/events.jsonl                   full payload per run (timeline HTML
                                         stored as its own file, see below)
-    data/timeline_<subject>_<stamp>.html  self-contained zoomable run timeline
+    output/timeline_<subject>_<stamp>.html  self-contained zoomable run timeline
 
 Commands (run from this directory):
     python3 task.py serve [--port 8000] [--fullscreen] [--no-open]
@@ -108,7 +108,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(HERE, "config.json")
 CONFIG_JS = os.path.join(HERE, "config.js")
 MANIFEST = os.path.join(HERE, "videos", "manifest.js")
-DATA_DIR = os.path.join(HERE, "data")
+DATA_DIR = os.path.join(HERE, "output")
 VIDEO_EXTS = (".mp4", ".webm", ".m4v", ".mov")
 MAX_SCAN_DEPTH = 3          # how deep import scans under the chosen folder
 # First-frame thumbnails for the run timeline tooltips come from the sibling
@@ -121,7 +121,8 @@ _events_lock = threading.Lock()
 
 SETTING_KEYS = (
     "centervideo", "subject", "note", "durationMin", "trigger", "triggerkey",
-    "keya", "keyb", "decor", "popleft", "popside", "poptrigger", "popinterval",
+    "keya", "keyb", "decor", "phoneframe", "sidesubject",
+    "popleft", "popside", "poptrigger", "popinterval",
     "satcenter", "volcenter", "satreel", "volreel", "allowseek",
 )
 # --center <keyword> shortcuts for the three built-in documentaries
@@ -465,7 +466,7 @@ def _safe_name(s):
 
 
 def _unique_base(subject):
-    """data/<safe>_<microsecond-stamp> base name, unique even when two runs
+    """output/<safe>_<microsecond-stamp> base name, unique even when two runs
     POST in the same second. Caller must hold _events_lock."""
     safe = _safe_name(subject)
     stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
@@ -635,7 +636,7 @@ class Handler(BaseHTTPRequestHandler):
                 if (isinstance(timeline_html, str)
                         and len(timeline_html.encode("utf-8")) <= MAX_TIMELINE_BYTES
                         and timeline_html.lstrip().startswith("<!DOCTYPE html")):
-                    timeline_rel = f"data/timeline_{base}.html"
+                    timeline_rel = f"output/timeline_{base}.html"
                     with open(os.path.join(DATA_DIR, "timeline_" + base + ".html"),
                               "w", encoding="utf-8") as fp:
                         fp.write(timeline_html)
@@ -652,7 +653,7 @@ class Handler(BaseHTTPRequestHandler):
                     for r in rows:
                         w.writerow([r.get("t"), r.get("subject"), r.get("type"),
                                     r.get("key"), r.get("value"), r.get("note")])
-            body = _json(self, {"saved": len(rows), "file": f"data/{base}.csv",
+            body = _json(self, {"saved": len(rows), "file": f"output/{base}.csv",
                                 "timeline": timeline_rel})
             self.end_headers(); self.wfile.write(body)
         elif url == "/api/team/pool":
